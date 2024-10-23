@@ -19,22 +19,19 @@ fn main() {
 #[derive(Component)]
 struct Player {
     is_jumping: bool,
+    velocity: Vec3, // Y 방향 속도 추가
 }
 
 impl Default for Player {
     fn default() -> Self {
-        Self { is_jumping: false }
+        Self { is_jumping: false, velocity: Vec3::ZERO, }
     }
 }
 
 // 카메라
 #[derive(Component)]
-struct Camera;
-
-// 카메라 정보
-#[derive(Component)]
-struct CameraFollow {
-    offset: Vec3, // 카메라와 플레이어 사이의 기본 오프셋
+struct Camera {
+    offset: Vec3,
 }
 
 // 바닥
@@ -94,7 +91,7 @@ fn init_object(
             ..default()
         },
         Obstacle,
-        RigidBody::Fixed, // 고정된 장애물로 설정
+        RigidBody::Dynamic, // 고정된 장애물로 설정
         GravityScale(10.0),
         Density(10.0),
         Collider::cuboid(0.5, 0.5, 0.5),
@@ -112,38 +109,70 @@ fn init_object(
             transform: Transform::from_xyz(0.0, 10.0, 10.0).looking_at(Vec3::ZERO, Vec3::Y),
             ..default()
         },
-        Camera,
-        CameraFollow {
-            offset: Vec3::new(0.0, 10.0, 10.0), // 기본 오프셋
+        Camera {
+            offset: Vec3::new(0.0, 10.0, 10.0),
         },
     ));
 }
 
 fn player_movement(
-    mut query: Query<(&mut Transform, &mut Player), With<Player>>,
+    mut param_set: ParamSet<(
+        Query<(&mut Transform, &mut Player), With<Player>>,
+        Query<&Transform, With<Camera>>, // 카메라의 Transform만 불변으로 가져옵니다.
+    )>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
 ) {
     let speed = 10.0;
+    let jump_strength = 20.0; // 점프의 힘
+    let gravity = 0.0; // 중력 값
 
-    if let Ok((mut transform, mut player_state)) = query.get_single_mut() {
-        if !player_state.is_jumping {
+    if let Ok(camera_transform) = param_set.p1().get_single() {
+        let forward: Vec3 = camera_transform.forward().into();
+        let right: Vec3 = camera_transform.right().into();
+
+        // Y 축 성분을 제거하여 수평 이동만 하도록 수정합니다.
+        let forward_flat = Vec3::new(forward.x, 0.0, forward.z).normalize();
+        let right_flat = Vec3::new(right.x, 0.0, right.z).normalize();
+
+        if let Ok((mut transform, mut player_state)) = param_set.p0().get_single_mut() {
+            // 중력 적용
+            if !player_state.is_jumping {
+                // 바닥에 있을 때만 점프 가능
+                if keyboard_input.pressed(KeyCode::Space) {
+                    player_state.is_jumping = true;
+                    player_state.velocity.y = jump_strength; // 점프 시작
+                }
+            }
+
+            // 중점 (Y) 속도 업데이트
+            if player_state.is_jumping {
+                player_state.velocity.y += gravity * time.delta_seconds(); // 중력 적용
+
+                // Y 위치 업데이트
+                transform.translation.y += player_state.velocity.y * time.delta_seconds();
+
+                // 바닥에 닿았는지 체크
+                if transform.translation.y <= 0.0 { // 바닥 높이 체크 (0.0을 바닥으로 간주)
+                    transform.translation.y = 0.0; // 바닥에 고정
+                    player_state.is_jumping = false; // 점프 상태 리셋
+                    player_state.velocity.y = 0.0; // Y 속도 리셋
+                }
+            }
+
+            // 수평 이동
             let mut direction = Vec3::ZERO;
             if keyboard_input.pressed(KeyCode::KeyW) {
-                direction.z -= 1.0;
+                direction += forward_flat;
             }
             if keyboard_input.pressed(KeyCode::KeyS) {
-                direction.z += 1.0;
+                direction -= forward_flat;
             }
             if keyboard_input.pressed(KeyCode::KeyA) {
-                direction.x -= 1.0;
+                direction -= right_flat;
             }
             if keyboard_input.pressed(KeyCode::KeyD) {
-                direction.x += 1.0;
-            }
-            if keyboard_input.pressed(KeyCode::Space) {
-                player_state.is_jumping = true;
-                direction.y += 10.0;
+                direction += right_flat;
             }
             transform.translation += direction * speed * time.delta_seconds();
         }
@@ -153,7 +182,7 @@ fn player_movement(
 fn camera_movement(
     mut param_set: ParamSet<(
         Query<(&mut Transform, &Player), With<Player>>,
-        Query<(&mut Transform, &mut CameraFollow), With<Camera>>,
+        Query<(&mut Transform, &mut Camera), With<Camera>>,
     )>,
     mouse_button: Res<ButtonInput<MouseButton>>,
     mut mouse_motion: EventReader<MouseMotion>,
@@ -200,28 +229,64 @@ fn camera_movement(
     }
 }
 
+
 fn landed_player_check(
     mut collision_events: EventReader<CollisionEvent>,
-    player_query: Query<Entity, With<Player>>,
+    mut player_query: Query<(Entity, &mut Player), With<Player>>,
     obstacle_query: Query<Entity, With<Obstacle>>,
+    ground_query: Query<Entity, With<Ground>>,
 ) {
-    let player_entity = player_query.get_single().ok();
     let obstacle_entity = obstacle_query.get_single().ok();
+    let ground_entity = ground_query.get_single().ok();
 
-    for event in collision_events.read() {
-        match event {
-            CollisionEvent::Started(entity1, entity2, _) => {
-                if let (Some(player), Some(obstacle)) = (player_entity, obstacle_entity) {
-                    if (*entity1 == player && *entity2 == obstacle)
-                        || (*entity1 == obstacle && *entity2 == player)
-                    {
-                        println!("플레이어가 장애물과 충돌했습니다!");
+    // 플레이어의 엔티티와 상태를 가변 참조로 가져옵니다.
+    if let Ok((player, mut player_state)) = player_query.get_single_mut() {
+        for event in collision_events.read() {
+            match event {
+                CollisionEvent::Started(entity1, entity2, _) => {
+                    // 장애물 충돌
+                    if let Some(obstacle) = obstacle_entity {
+                        if (*entity1 == player && *entity2 == obstacle)
+                            || (*entity1 == obstacle && *entity2 == player)
+                        {
+                            println!("플레이어가 장애물과 충돌했습니다!");
+                        }
+                    }
+
+                    // 바닥 충돌
+                    if let Some(ground) = ground_entity {
+                        if (*entity1 == player && *entity2 == ground)
+                            || (*entity1 == ground && *entity2 == player)
+                        {
+                            player_state.is_jumping = false;
+                            println!("플레이어가 바닥에 닿았습니다. 점프 상태를 해제합니다.");
+                        }
                     }
                 }
-            }
-            CollisionEvent::Stopped(_, _, _) => {
-                println!("플레이어와 장애물의 충돌이 끝났습니다.");
+                CollisionEvent::Stopped(entity1, entity2, _) => {
+                    // 장애물 충돌 해제
+                    if let Some(obstacle) = obstacle_entity {
+                        if (*entity1 == player && *entity2 == obstacle)
+                            || (*entity1 == obstacle && *entity2 == player)
+                        {
+                            println!("플레이어가 장애물과의 충돌에서 해제되었습니다.");
+                        }
+                    }
+
+                    // 바닥 충돌 해제
+                    if let Some(ground) = ground_entity {
+                        if (*entity1 == player && *entity2 == ground)
+                            || (*entity1 == ground && *entity2 == player)
+                        {
+                            player_state.is_jumping = true;
+                            println!("플레이어가 바닥과의 접촉을 멈췄습니다. 점프 상태입니다.");
+                        }
+                    }
+                }
             }
         }
     }
 }
+
+
+
