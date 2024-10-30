@@ -1,7 +1,6 @@
-use std::process::exit;
 use bevy::prelude::*;
 use crate::components::common_component::game_state::{LevelState, UiState};
-
+use crate::util::i18n::I18n;
 
 // 버튼 식별을 위한 컴포넌트
 #[derive(Component)]
@@ -17,7 +16,11 @@ pub fn main_menu(app: &mut App) {
 }
 
 // 초기화 시스템
-fn init(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn init(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    i18n: Res<I18n>
+) {
     let font = asset_server.load("fonts/nanum/NanumGothic-Regular.ttf");
     commands
         .spawn((NodeBundle {
@@ -46,7 +49,7 @@ fn init(mut commands: Commands, asset_server: Res<AssetServer>) {
                 .insert(MainMenuButton)
                 .with_children(|parent| {
                     parent.spawn(TextBundle::from_section(
-                        "Start Game",
+                        i18n.get("게임시작"),
                         TextStyle {
                             font: font.clone(),
                             font_size: 40.0,

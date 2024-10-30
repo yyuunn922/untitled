@@ -24,7 +24,7 @@ fn init(
 
 // 업데이트 시스템
 fn update_test() {
-    println!("테스트고고");
+    // println!("테스트고고");
 }
 
 // 클린 시스템

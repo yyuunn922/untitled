@@ -20,13 +20,18 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugins(RapierPhysicsPlugin::<NoUserData>::default()) // Rapier 물리 엔진 플러그인 추가
         .add_plugins(RapierDebugRenderPlugin::default()) // 디버그 렌더 플러그인 추가
-        .insert_resource(I18n::new())
-        .add_systems(Startup, init_setup) // 초기 기본 카메라등록
+        // 상태
+        .insert_state(Language::Korean) // 초기 언어 상태
         .insert_state(LevelState::MainMenu)// 초기 레벨 상태
         .insert_state(UiState::MainMenu) // 초기 UI 상태
-        .insert_state(Language::Korean) // 초기 언어 상태
+        // 리소스
+        .insert_resource(I18n::new())
+        // 시스템
+        .add_systems(Startup, init_setup) // 초기 기본 카메라등록
+        // 레벨
         .add_level_extends() // 레벨 변경 시스템
         .add_ui_extends() // UI 변경 시스템
+        //
         .run();
 }
 
