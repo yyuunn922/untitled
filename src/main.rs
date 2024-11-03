@@ -1,21 +1,31 @@
-mod components;
-mod systems;
-mod scenes;
-mod ui;
-mod util;
+mod client;
+mod server;
 
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
-use components::common_component::game_state::LevelState;
-use components::common_component::camera;
-use scenes::village::village;
-use scenes::field::field;
-use scenes::main_menu::main_menu;
-use ui::main_menu::main_menu as ui_main_menu;
-use components::common_component::game_state::UiState;
-use crate::util::i18n::{I18n, Language};
+use client::components::common_component::game_state::LevelState;
+use client::components::common_component::camera;
+use client::scenes::village::village;
+use client::scenes::field::field;
+use client::scenes::main_menu::main_menu;
+use client::uis::main_menu::main_menu as ui_main_menu;
+use client::components::common_component::game_state::UiState;
+use crate::client::utils::i18n::{I18n, Language};
+use server::server::server_start;
+use std::thread;
 
 fn main() {
+    // 서버를 실행합니다
+    // 서버를 별도의 스레드에서 실행
+    thread::spawn(move || {
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(async {
+            server_start().await;
+        });
+    });
+
+
+    // 클라이언트를 실행합니다
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(RapierPhysicsPlugin::<NoUserData>::default()) // Rapier 물리 엔진 플러그인 추가
@@ -31,7 +41,6 @@ fn main() {
         // 레벨
         .add_level_extends() // 레벨 변경 시스템
         .add_ui_extends() // UI 변경 시스템
-        //
         .run();
 }
 

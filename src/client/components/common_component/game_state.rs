@@ -14,3 +14,5 @@ pub enum UiState {
     None,
     MainMenu,
 }
+
+// 네트워크 접속상태

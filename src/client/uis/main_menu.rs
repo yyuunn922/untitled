@@ -4,7 +4,7 @@ use crate::util::i18n::I18n;
 
 // 버튼 식별을 위한 컴포넌트
 #[derive(Component)]
-struct MainMenu;
+struct MainMenuClearItem;
 
 #[derive(Component)]
 struct MainMenuButton;
@@ -32,7 +32,7 @@ fn init(
                 ..default()
             },
             ..default()
-        }, MainMenu))
+        }, MainMenuClearItem))
         .with_children(|parent| {
             parent
                 .spawn(ButtonBundle {
@@ -62,7 +62,7 @@ fn init(
 
 fn clear(
     mut commands: Commands,
-    query: Query<Entity, With<MainMenu>>
+    query: Query<Entity, With<MainMenuClearItem>>
 ) {
     for entity in query.iter() {
         commands.entity(entity).despawn_recursive();
