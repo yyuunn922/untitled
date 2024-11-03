@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use crate::components::common_component::game_state::LevelState;
+use crate::client::components::common_component::game_state::LevelState;
 
 pub fn field(app : &mut App) {
     app.add_systems(OnEnter(LevelState::Field), init)

@@ -1,4 +1,4 @@
-use crate::components::common_component::game_state::LevelState;
+use crate::client::components::common_component::game_state::LevelState;
 use bevy::prelude::*;
 use bevy::render::mesh::Mesh;
 

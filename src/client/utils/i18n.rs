@@ -21,12 +21,6 @@ pub struct I18n {
 // 다시 살펴봐야함
 impl Default for I18n {
     fn default() -> Self {
-        I18n{data: HashMap::new(), language: Language::Korean}
-    }
-}
-
-impl I18n {
-    pub fn new() -> Self {
         let mut temp: HashMap<Language, HashMap<String, String>> = HashMap::new();
         for i in ["english"] {
             let path = format!("assets/i18n/{}.json", i);
@@ -48,7 +42,9 @@ impl I18n {
             language: Language::Korean,
         }
     }
+}
 
+impl I18n {
     pub fn get(&self, key: &str) -> String {
         if self.language == Language::Korean {
             return key.to_string();

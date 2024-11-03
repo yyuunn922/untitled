@@ -11,6 +11,7 @@ use client::scenes::main_menu::main_menu;
 use client::uis::main_menu::main_menu as ui_main_menu;
 use client::components::common_component::game_state::UiState;
 use crate::client::utils::i18n::{I18n, Language};
+use crate::client::components::common_component::game_state::Network;
 use server::server::server_start;
 use std::thread;
 
@@ -24,7 +25,6 @@ fn main() {
         });
     });
 
-
     // 클라이언트를 실행합니다
     App::new()
         .add_plugins(DefaultPlugins)
@@ -35,7 +35,9 @@ fn main() {
         .insert_state(LevelState::MainMenu)// 초기 레벨 상태
         .insert_state(UiState::MainMenu) // 초기 UI 상태
         // 리소스
-        .insert_resource(I18n::new())
+        .insert_resource(I18n::default())
+        // 네트워크
+        .insert_resource(Network::default())
         // 시스템
         .add_systems(Startup, init_setup) // 초기 기본 카메라등록
         // 레벨

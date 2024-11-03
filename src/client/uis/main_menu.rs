@@ -1,6 +1,6 @@
 use bevy::prelude::*;
-use crate::components::common_component::game_state::{LevelState, UiState};
-use crate::util::i18n::I18n;
+use crate::client::components::common_component::game_state::{LevelState, UiState};
+use crate::client::utils::i18n::I18n;
 
 // 버튼 식별을 위한 컴포넌트
 #[derive(Component)]

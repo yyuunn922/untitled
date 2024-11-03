@@ -62,7 +62,7 @@ async fn run_server(command_sender: UnboundedSender<String>) -> Result<(), Box<d
             return Err(Box::new(e));
         }
     };
-    println!("서버가 7878 포트에서 대기 중입니다...");
+    println!("서버가 7879 포트에서 대기 중입니다...");
     io::stdout().flush().unwrap();
 
     loop {
